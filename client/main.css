@@ -1,0 +1,15 @@
+/* CSS declarations go here */
+/* Carousel Styles */
+.container {
+    max-width: 960px;
+    margin: 20px auto;
+}
+
+.img-container {
+    width: 100%;
+    max-height: 450px; /* very import for controlling canvas height. Cropper height inherits from this */
+}
+
+.img-container img {
+    max-width: 100%;
+}
