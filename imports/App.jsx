@@ -1,8 +1,9 @@
 import React, { Component, PropTypes } from 'react';
 import ReactDOM from 'react-dom';
 import { createContainer } from 'meteor/react-meteor-data';
-import 'cropperjs';
+// import 'cropperjs';
 import '../node_modules/cropper/dist/cropper.css'
+import ReactCropper from './Cropper';
 
 import Images from '../imports/api/images';
 
@@ -25,7 +26,6 @@ class App extends Component {
         this.onChange = this.onChange.bind(this);
         this.getImages = this.getImages.bind(this);
         this.onClick = this.onClick.bind(this);
-        this.createCropper = this.createCropper.bind(this);
         this.uploadCroppedImage = this.uploadCroppedImage.bind(this);
     }
     render() {
@@ -33,26 +33,28 @@ class App extends Component {
             this.getContent()
         );
     }
-    componentDidMount() { // TODO: Delete after preferred carousel settings are configured
-        // Use listener to make sure the dom to be fully loaded. Otherwise cropper won't work
-        window.addEventListener('DOMContentLoaded', this.createCropper);
-    }
-    componentDidUpdate() {
-        const node = ReactDOM.findDOMNode(this.file);
-        if(node) {
-            // Use timeout delay to allow the dom to be fully loaded. Otherwise cropper won't work
-            Meteor.setTimeout(()=> {
-                const cropper = new Cropper(node, {
-                    aspectRatio: 1,
-                    zoomable: false,
-                });
-            }, 50);
-        }
-    }
+    // componentDidMount() { // TODO: Delete after preferred carousel settings are configured
+    //     // Use listener to make sure the dom to be fully loaded. Otherwise cropper won't work
+    //     window.addEventListener('DOMContentLoaded', this.createCropper);
+    // }
+    // componentDidUpdate() {
+    //     const node = ReactDOM.findDOMNode(this.file);
+    //     if(node) {
+    //         // Use timeout delay to allow the dom to be fully loaded. Otherwise cropper won't work
+    //         Meteor.setTimeout(()=> {
+    //             // window.cropper = new Cropper(node, {
+    //             //     aspectRatio: 1,
+    //             //     zoomable: false,
+    //             // });
+    //             this.createCropper();
+    //         }, 50);
+    //     }
+    // }
     getContent() {
         const cursor = Images.findOne({ _id: this.state.fileID });
-        // const filePath = cursor ? cursor.link() : '';
-        const filePath = "http://localhost:3000/cdn/storage/Images/Zrotg45Bf3XftoWX7/original/Zrotg45Bf3XftoWX7.jpg";
+        this.fileExtension = cursor ? cursor.extension : null;
+        const filePath = cursor ? cursor.link() : '';
+        // const filePath = "http://localhost:3000/cdn/storage/Images/Zrotg45Bf3XftoWX7/original/Zrotg45Bf3XftoWX7.jpg";
         if (this.state.uploading) {
             return (
                 <div className="container">
@@ -65,7 +67,11 @@ class App extends Component {
             <div>
                 <input id="fileInput" type="file" onChange={this.onChange} />
                 <div className="img-container">
-                    <img id={"toCrop"} ref={(c) => this.file = c } src={filePath} />
+                    <ReactCropper
+                        ref={(c) => this.cropper = c }
+                        src={filePath}
+                        aspectRatio={1}
+                    />
                 </div>
                 <div>
                     <button className="btn btn-primary" onClick={this.onClick}>Crop</button>
@@ -110,23 +116,28 @@ class App extends Component {
         }
     }
     onClick() {
-        const cropper = this.state.cropper;
-        cropper.getCroppedCanvas().toBlob(this.uploadCroppedImage);
+        // this.base64 = cropper.getCroppedCanvas().toDataURL('image/' + this.fileExtension);
+        if (this.cropper) {
+            this.cropper.getCroppedCanvas().toBlob(this.uploadCroppedImage);
+        } else {
+            console.log("Node missing!");
+        }
+
     }
-    createCropper() {
-        const node = ReactDOM.findDOMNode(this.file);
-        const cropper = new Cropper(node, {
-            aspectRatio: 1,
-            zoomable: false,
-        });
-        this.setState({ cropper });
-    }
+    // createCropper() {
+    //     const node = ReactDOM.findDOMNode(this.file);
+    //     window.cropper = new Cropper(node, {
+    //         aspectRatio: 1,
+    //         zoomable: false,
+    //     });
+    //     // this.setState({ cropper });
+    // }
     uploadCroppedImage(blob) {
         console.log(blob);
         let formData = new FormData();
         formData.append('croppedImage', blob);
         const upload = Images.insert({
-            file: formData.get('croppedImage'),
+            file: new File([blob], this.state.fileName),
             streams: 'dynamic',
             chunkSize: 'dynamic'
         }, false);
@@ -149,6 +160,10 @@ class App extends Component {
 App.propTypes = {
     images: PropTypes.array.isRequired,
 };
+
+App.fileExtension = null;
+App.base64 = null;
+App.cropper = null;
 
 const CropperContainer = (props) => (
     <div className={"cropper-container cropper-bg"}>
